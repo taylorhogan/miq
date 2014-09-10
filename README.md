@@ -1,14 +1,11 @@
-# json
+# MIQ
 
-A Clojure library designed to ... well, that part is up to you.
+Minimally Invasive Quality, a clojure library for Trello analytics
 
 ## Usage
 
-FIXME
+Only usable in REPL currently
 
 ## License
 
-Copyright © 2014 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+None
