@@ -1,5 +1,5 @@
 ; Trello Analytics
-
+; a helpful website to see json http://www.jsoneditoronline.org
 (ns json.core
   (:require [clojure.data.json :as json])
   )
@@ -7,6 +7,7 @@
 
 
 (use '(incanter core charts stats ))
+
 
 ; define some constants for column ids
 (def in-progress-column-id "53067ded5264b32b0bf1dbfa")
@@ -20,7 +21,7 @@
   (json/read-str (slurp file-path) :key-fn keyword)
   )
 
-; get resource path
+; get resource path, some environments set up the working directory differently
 (defn resource-path []
   (let [current-directory (System/getProperty "user.dir")]
     (if (.contains current-directory "/src") (str current-directory "/../../resources") (str current-directory "/resources"))
@@ -58,44 +59,13 @@
 
 
 
-;
-(defn column-name-to-column-id [json-map column-name]
-  (loop [in-data (:lists json-map)]
-    (if (empty? in-data) nil
-      (if (= column-name (:name (first in-data))) (:id (first in-data))
-        (recur (rest in-data))
 
-        )
-      )
-    )
+
+; bunch of filters to find appropriate cards
+
+(defn is-card-movement? [c]
+  (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id  c)))
   )
-
-
-
-; Is this card in a column-id
-(defn card-in-column? [card column-id]
-  (= (:idList card) column-id)
-  )
-
-; How many cards are in a named column
-(defn arity-of-column [json-map column-name]
-  (loop [cards (:cards json-map)
-         column-id (column-name-to-column-id json-map column-name)
-         accum 0]
-    (if (empty? cards) accum
-      (recur
-       (rest cards)
-        column-id
-       (if (card-in-column? (first cards) column-id)
-         (inc accum)
-         accum)
-
-       )
-      )
-    )
-  )
-
-
 
 (defn card-movement [json-map]
   (filter is-card-movement? (:actions json-map))
@@ -134,25 +104,6 @@
 
 (defn is-owner [c o]
   )
-;http://www.jsoneditoronline.org
-(defn make-blip [time delta]
-  (conj [] (- time delta) time (+ time delta) ))
-
-
-(defn blipper [xs]
-  (loop
-    [css xs
-         result []]
-    (if (empty? css) result
-      (recur (rest css) (conj result (make-blip (first css) 1))))
-    )
-  )
-
-(defn get-bucket [min max delta value]
-  (/ (- value min) delta)
-  )
-
-
 
 
 (defn is-rework? [movement-c]
@@ -174,10 +125,10 @@
 
 (def file-path (str (resource-path) "/cd.json"))
 (def json-map (file-to-map file-path))
+
+
 (def movements (card-movement json-map))
-(count movements)
 (def reworks  (filter is-rework? movements))
-(count reworks)
 (def interruptions  (filter is-interruption? movements))
 
 
@@ -185,58 +136,21 @@
 
 
 (def interruptions-on-week (map week-of-year-from-trello interruptions))
-(view (histogram interruptions-on-week :nbins 20 :y-label "interruptions" :x-label "week number" :title "interrupions by week") )
+(view (histogram interruptions-on-week :nbins 20 :y-label "interruptions" :x-label "week number" :title "interruptions by week") )
 
 (def rework-on-week (map week-of-year-from-trello reworks))
 (view (histogram rework-on-week :nbins 20 :y-label "reworks" :x-label "week number" :title "reworks by week") )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+(def movements-on-week (map week-of-year-from-trello movements))
+(view (histogram movements-on-week :nbins 20 :y-label "Movements" :x-label "week number" :title "movements by week") )
+; some testing...
 
 (def interruptions-by-person (group-by (fn[c] (:fullName (:memberCreator c)) ) interruptions))
 (count  interruptions-by-person)
-
-
-
 (def taylor-movements (filter (fn[c] (= (:fullName (:memberCreator c)) "taylor")) movements))
 
 
-(def dates (reverse(map (fn[c] (to-millis (:date c))) taylor-movements)))
 
-
-(def y (flatten(repeat  (count dates) '(0 1 0))))
- (comment
- (view (time-series-plot blipped-date y
-                          :title "Taylor's Rejected bug fixes"
-                          :x-label "Time"
-                          :y-label "Rejections"))
- )
-
-
-(- (last dates) (first dates))
-
-(defn bucketize [seq-of-times bucket-size]
-  (reduce (fn [m data]
-                (let [min (last seq-of-times)
-                      max (first seq-of-times)
-                      bucket (get-bucket min max  bucket-size data)]
-
-                  (update-in m [:buckets bucket] (fnil inc 0))))
-              {}
-              seq-of-times)
-  )
 
 
 
