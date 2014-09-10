@@ -3,8 +3,17 @@
 (ns json.core
   (:require [clojure.data.json :as json])
   )
+(import '(java.util Calendar))
+
+
+
 
 (use '(incanter core charts stats ))
+
+; define some constants for column ids
+(def in-progress-column-id "53067ded5264b32b0bf1dbfa")
+(def next-column-id "53067ded5264b32b0bf1dbf9")
+
 
 
 ; map a .json file into a hash map
@@ -13,6 +22,11 @@
   (json/read-str (slurp file-path) :key-fn keyword)
   )
 
+; get resource path
+(defn resource-path []
+  (let [current-directory (System/getProperty "user.dir")]
+    (if (.contains current-directory "/src") (str current-directory "/../../resources") (str current-directory "/resources"))
+    ))
 
 
 ; some date stuff
@@ -33,6 +47,16 @@
 (defn to-millis [trello-date]
   (.getTime (.parse  (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (remove-from-end trello-date "Z")))
   )
+
+(defn week-of-year-from-date
+  [date]
+	(let [cal (Calendar/getInstance)]
+		(.setTime cal date)
+		(.get cal Calendar/WEEK_OF_YEAR)))
+
+
+(defn week-of-year-from-trello [card]
+  (week-of-year-from-date(to-date (:date card ))))
 
 
 
@@ -136,13 +160,64 @@
 
 
 
+(defn is-rework? [movement-c]
+  (and
+   (not= (list-before-id movement-c) next-column-id)
+   (= (list-after-id movement-c) in-progress-column-id)
+   )
+  )
+
+(defn is-interruption? [movement-c]
+  (and
+   (= (list-after-id movement-c) next-column-id)
+   (= (list-before-id movement-c) in-progress-column-id)
+   )
+  )
 
 
-(def json-map (file-to-map "/Users/taylor/Desktop/cd.json"))
+; start of analyis
+
+(def file-path (str (resource-path) "/cd.json"))
+(def json-map (file-to-map file-path))
 (def movements (card-movement json-map))
+(count movements)
+(def reworks  (filter is-rework? movements))
+(count reworks)
+(def interruptions  (filter is-interruption? movements))
+(count interruptions)
+
+(first interruptions)
+(week-of-year-from-trello (last interruptions ))
+
+
+(def p (map week-of-year-from-trello interruptions))
+(view (histogram p :nbins 20 :x-label "week number" :title "interrupions by week") )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+(def interruptions-by-person (group-by (fn[c] (:fullName (:memberCreator c)) ) interruptions))
+(count  interruptions-by-person)
+
+
 
 (def taylor-movements (filter (fn[c] (= (:fullName (:memberCreator c)) "taylor")) movements))
+
+
 (def dates (reverse(map (fn[c] (to-millis (:date c))) taylor-movements)))
+
 
 (def y (flatten(repeat  (count dates) '(0 1 0))))
  (comment
@@ -166,18 +241,13 @@
               seq-of-times)
   )
 
-(defn create-blank-buckets [list-of-milli-sec-data bucket-size]
-  (let
-    [min (last seq-of-times)
-     max (first seq-of-times)
-     list list-of-milli-sec-data
-     results {}
-     ]
-    (if (empty? list) results
-      (recur min max (rest list) )
-    )
-  )
-  )
 
 
- (bucketize dates 100000000)
+
+
+
+
+
+
+
+
