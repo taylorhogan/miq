@@ -6,8 +6,6 @@
 (import '(java.util Calendar))
 
 
-
-
 (use '(incanter core charts stats ))
 
 ; define some constants for column ids
@@ -98,9 +96,6 @@
   )
 
 
-(defn add-to-time-bucket [t bucket-map min max delta]
-    (let [])
-  )
 
 (defn card-movement [json-map]
   (filter is-card-movement? (:actions json-map))
@@ -184,14 +179,16 @@
 (def reworks  (filter is-rework? movements))
 (count reworks)
 (def interruptions  (filter is-interruption? movements))
-(count interruptions)
-
-(first interruptions)
-(week-of-year-from-trello (last interruptions ))
 
 
-(def p (map week-of-year-from-trello interruptions))
-(view (histogram p :nbins 20 :x-label "week number" :title "interrupions by week") )
+
+
+
+(def interruptions-on-week (map week-of-year-from-trello interruptions))
+(view (histogram interruptions-on-week :nbins 20 :y-label "interruptions" :x-label "week number" :title "interrupions by week") )
+
+(def rework-on-week (map week-of-year-from-trello reworks))
+(view (histogram rework-on-week :nbins 20 :y-label "reworks" :x-label "week number" :title "reworks by week") )
 
 
 
