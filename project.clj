@@ -7,4 +7,5 @@
                  [org.clojure/data.json "0.2.5"]
                  [incanter "1.2.3-SNAPSHOT"]
                  ]
+  :plugins [[codox "0.8.10"]]
                 )
