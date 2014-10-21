@@ -16,16 +16,19 @@
 
 
 ; start of analyis
+(def files (get-json-files))
+(def all (build-map files))
+(def movements (distinct all))
+(println "distinct" (count movements))
 
-(def file-path (str (resource-path) "/cd.json"))
-(def json-map (file-to-map file-path))
 
 
-(def movements (card-movement json-map))
+
+
 (def reworks (filter is-rework? movements))
 (def interruptions (filter is-interruption? movements))
 (def checked-in (filter is-checked-in? movements))
-(def has-schedule (filter (fn [c] (not-empty (:due c))) (:cards json-map)))
+;(def has-schedule (filter (fn [c] (not-empty (:due c))) (:cards json-map)))
 
 (defn print-movement-stats [movements]
   (do
@@ -51,40 +54,37 @@
   )
 
 
+(def sorted-movements (sort-by milli-time movements))
+
+(println "start of analysis date:" (trello-date (first sorted-movements)))
+(println "end of analysis date:" (trello-date (last sorted-movements)))
+
 (print-movement-stats movements)
 
 
-(comment
-
-  (def interruptions-on-week (map week-of-year-from-trello interruptions))
-  (view (histogram interruptions-on-week :nbins 20 :y-label "interruptions by week" :x-label "week number" :title "interruptions by week"))
-
-  (def rework-on-week (map week-of-year-from-trello reworks))
-  (view (histogram rework-on-week :nbins 20 :y-label "rework by week" :x-label "week number" :title "reworks by week"))
-
-  (def movements-on-week (map week-of-year-from-trello movements))
-  (view (histogram movements-on-week :nbins 20 :y-label "movements by week" :x-label "week number" :title "movements by week"))
-
-  (def checked-in-on-week (map week-of-year-from-trello checked-in))
-  (view (histogram checked-in-on-week :nbins 20 :y-label "check in by week" :x-label "week number" :title "checked in by week"))
 
 
+(println "total interruptions" (count interruptions))
+(def interruptions-on-week (map week-of-year-from-trello interruptions))
+(view (histogram interruptions-on-week :nbins 20 :y-label "interruptions by week" :x-label "week number" :title "interruptions by week"))
+
+(def rework-on-week (map week-of-year-from-trello reworks))
+(view (histogram rework-on-week :nbins 20 :y-label "rework by week" :x-label "week number" :title "reworks by week"))
+
+(def movements-on-week (map week-of-year-from-trello movements))
+(view (histogram movements-on-week :nbins 20 :y-label "movements by week" :x-label "week number" :title "movements by week"))
+
+(def checked-in-on-week (map week-of-year-from-trello checked-in))
+(view (histogram checked-in-on-week :nbins 20 :y-label "check in by week" :x-label "week number" :title "checked in by week"))
 
 
-  (println (week-of-year-from-trello (first movements)) (week-of-year-from-trello (last movements)))
-  (count movements)
-  (count (distinct movements))
 
 
-  (def file-path1 (str (resource-path) "/cd1.json"))
-  (def json-map1 (file-to-map file-path1))
-  (def movements1 (card-movement json-map1))
-  (count (distinct movements1))
-  (def both (concat movements movements1))
-  (count both)
-  )
+(println (week-of-year-from-trello (first movements)) (week-of-year-from-trello (last movements)))
 
-(def f (first has-schedule))
+
+
+
 (defn date-card-moved-to-check-in [c movement-actions]
 
 
@@ -93,11 +93,9 @@
                          (= (:id c) (card-id-of-action action)))) movement-actions))
 
 
-(date-card-moved-to-check-in f movements)
 
-(def directory (clojure.java.io/file (str (resource-path))))
-(def files (file-seq directory))
-(filter (fn [f] (.endsWith f ".json")) files)
+
+
 
 
 

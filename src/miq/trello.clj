@@ -1,7 +1,22 @@
 
 (ns miq.trello
-  (:require [clojure.data.json :as json])
+  (:import (java.util Calendar))
+  (:require [clojure.data.json :as json]
+            [miq.util :refer :all])
+
   )
+
+
+;map a .json file into a hash map
+(defn get-json-files [ ]
+
+  (let
+      [directory (clojure.java.io/file (str (resource-path)))
+       files (file-seq directory)]
+    (filter (fn [f] (.endsWith (.getName f) ".json")) files)
+    )
+  )
+
 
 
 ;map a .json file into a hash map
@@ -9,6 +24,8 @@
   "Return a map of the json data from the file path"
   (json/read-str (slurp file-path) :key-fn keyword)
   )
+
+
 
 
 ; define some constants for column ids
@@ -96,3 +113,41 @@
   )
 
 
+(defn to-date [trello-date]
+  (.parse (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (remove-from-end trello-date "Z"))
+  )
+
+(defn to-millis [trello-date]
+  (.getTime (.parse (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (remove-from-end trello-date "Z")))
+  )
+
+(defn week-of-year-from-date
+  [date]
+  (let [cal (Calendar/getInstance)]
+    (.setTime cal date)
+    (.get cal Calendar/WEEK_OF_YEAR)))
+
+
+(defn week-of-year-from-trello [card]
+  (week-of-year-from-date (to-date (:date card))))
+
+
+(defn trello-date [card]
+  (:date card)
+  )
+
+(defn milli-time [card]
+  (to-millis (trello-date card))
+  )
+
+(defn build-map [files]
+  (loop
+      [f files
+       ret ()
+       ]
+    (if (empty? f)
+      ret
+      (recur (rest f) (concat ret (card-movement (file-to-map (str (.getPath (first f)))))))
+      )
+    )
+  )
