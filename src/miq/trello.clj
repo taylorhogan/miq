@@ -1,6 +1,6 @@
-
 (ns miq.trello
-  (:import (java.util Calendar))
+  (:import (java.util Calendar)
+           (clojure inspector$atom_QMARK_))
   (:require [clojure.data.json :as json]
             [miq.util :refer :all])
 
@@ -8,7 +8,7 @@
 
 
 ;map a .json file into a hash map
-(defn get-json-files [ ]
+(defn get-json-files []
 
   (let
       [directory (clojure.java.io/file (str (resource-path)))
@@ -19,7 +19,7 @@
 
 
 
-;map a .json file into a hash map
+
 (defn file-to-map [file-path]
   "Return a map of the json data from the file path"
   (json/read-str (slurp file-path) :key-fn keyword)
@@ -34,10 +34,14 @@
 (def checked-into-dev "53c7c8c718cd4d9bae3b7c91")
 (def checked-into-stable "53067ded5264b32b0bf1dbfb")
 
+; some special virtual columns rules
+(def all-checked-in "all")
+(def not-any-checked-in "none")
+
 
 ; bunch of filters to find appropriate cards
 
-(defn  is-update-card? [c]
+(defn is-update-card? [c]
   (= "updateCard" (:type c))
   )
 
@@ -47,11 +51,11 @@
   )
 
 (defn list-before [c]
-  (if (nil? (:listBefore (:data c))) nil  (:listBefore (:data c)))
+  (if (nil? (:listBefore (:data c))) nil (:listBefore (:data c)))
   )
 
 (defn list-after [c]
-  (if (nil? (:listAfter (:data c))) nil  (:listAfter (:data c)))
+  (if (nil? (:listAfter (:data c))) nil (:listAfter (:data c)))
   )
 
 (defn list-after-id [c]
@@ -71,7 +75,7 @@
   )
 
 (defn is-card-movement? [c]
-  (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id  c)))
+  (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id c)))
   )
 
 (defn card-movement [json-map]
@@ -80,13 +84,25 @@
 
 
 (defn is-card-movement? [c]
-  (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id  c)))
+  (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id c)))
   )
 
 (defn is-checked-in? [movement-c]
   (= (list-after-id movement-c) checked-into-dev)
   )
 
+
+(defn multiple-equal? [action-col id]
+  (cond
+    (= all-checked-in id)
+    (or
+      (= checked-into-dev action-col)
+      (= checked-into-stable action-col)
+      )
+    :else
+    (= id action-col)
+    )
+  )
 
 (defn move-from-to [action from-id to-id]
   (and
@@ -95,7 +111,29 @@
     )
   )
 
+(defn move-from-to-multiple [action from-id to-id]
+  (and
+    (multiple-equal? (list-before-id action) from-id)
+    (multiple-equal? (list-after-id action) to-id)
+    )
+  )
+
+
+
 (defn is-rework? [movement-c]
+  (or
+    (and
+      (multiple-equal? (list-before-id movement-c) all-checked-in)
+      (multiple-equal? (list-after-id movement-c) next-column-id)
+      )
+    (and
+      (multiple-equal? (list-before-id movement-c) all-checked-in)
+      (multiple-equal? (list-after-id movement-c) in-progress-column-id)
+      )
+    )
+  )
+
+(defn is-rework1? [movement-c]
   (and
     (not= (list-before-id movement-c) next-column-id)
     (or
