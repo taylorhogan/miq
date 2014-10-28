@@ -6,8 +6,9 @@
 
 ; a helpful website to see json http://www.jsoneditoronline.org
 ; a helpful plotting page http://data-sorcery.org/category/plotting/
+; Look mom, no locals or statics..
 
-
+; TODO Need to generalize the idea of "interesting" transitions, for plotting, printing...
 (ns miq.main
   (:require [clojure.data.json :as json]
             [miq.util :refer :all]
@@ -68,7 +69,7 @@
         first-week (week-of-year-from-trello (first (:movements db)))
         last-week (week-of-year-from-trello (last (:movements db)))
         date-range (vec (range first-week last-week))
-        plot1 (line-chart date-range (get-vals movement-week-map date-range 0) :legend true :series-label "movements")]
+        plot1 (line-chart date-range (get-vals movement-week-map date-range 0) :y-label "Count" :x-label "Weeks" :legend true :series-label "movements")]
     (do
       (add-categories plot1 date-range (get-vals interuption-week-map date-range 0) :legend true :series-label "interruptions")
       (add-categories plot1 date-range (get-vals rework-week-map date-range 0) :legend true :series-label "rework")
@@ -112,14 +113,8 @@
 ; TODO in progress
 (comment
 
-  (def card-name (get-card-name (last cards-that-moved) all-cards))
-  (println card-name)
-  (def m (get-movements-for-card (last cards-that-moved) sorted-movements))
   (println (from-milli-to-days ((get-column-times m) in-progress-column-id 0)))
   (println (from-milli-to-days ((get-column-times m) next-column-id 0)))
-
-
-
 
 
   ;(def has-schedule (filter (fn [c] (not-empty (:due c))) (:cards json-map)))

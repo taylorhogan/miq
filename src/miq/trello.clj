@@ -272,7 +272,7 @@
                     )
     )
   )
-
+; given a collection of movements on a given card, return a collection of times in each column
 (defn get-column-times [movements-of-card]
   (loop
       [ms movements-of-card
@@ -298,7 +298,7 @@
     )
   )
 
-
+; Given a card-id and a list of cards, get the name, ugh
 (defn get-card-name [card-id cards]
   (:name (first (filter (fn [c] (= card-id (:id c))) cards)))
   )
