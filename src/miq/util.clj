@@ -29,6 +29,6 @@
   (/ (double milli) (* 1000.0 60.0 60.0 24.0)))
 
 ; given a hashmap and a collection of keys return the associated collection of values
-(defn get-vals [amap keys]
-  (map (fn [k] (amap k)) keys)
+(defn get-vals [amap keys default]
+  (map (fn [k] (amap k default)) keys)
   )
