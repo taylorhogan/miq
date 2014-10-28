@@ -6,28 +6,6 @@
 
   )
 
-
-;map a .json file into a hash map
-(defn get-json-files []
-
-  (let
-      [directory (clojure.java.io/file (str (resource-path)))
-       files (file-seq directory)]
-    (filter (fn [f] (.endsWith (.getName f) ".json")) files)
-    )
-  )
-
-
-
-
-(defn file-to-map [file-path]
-  "Return a map of the json data from the file path"
-  (json/read-str (slurp file-path) :key-fn keyword)
-  )
-
-
-
-
 ; define some constants for column ids
 (def in-progress-column-id "53067ded5264b32b0bf1dbfa")
 (def next-column-id "53067ded5264b32b0bf1dbf9")
@@ -39,8 +17,25 @@
 (def not-any-checked-in "none")
 
 
-; bunch of filters to find appropriate cards
 
+(defn get-json-files []
+  "return all .json files in a directory"
+  (let
+      [directory (clojure.java.io/file (str (resource-path)))
+       files (file-seq directory)]
+    (filter (fn [f] (.endsWith (.getName f) ".json")) files)
+    )
+  )
+
+
+
+(defn file-to-map [file-path]
+  "Return a map of the json data from the file path"
+  (json/read-str (slurp file-path) :key-fn keyword)
+  )
+
+
+; bunch of filters to find appropriate cards
 (defn is-update-card? [c]
   (= "updateCard" (:type c))
   )
@@ -174,11 +169,13 @@
   (:date card)
   )
 
+
 (defn milli-time [card]
   (to-millis (trello-date card))
   )
 
-(defn build-map [files]
+
+(defn all-card-movements [files]
   (loop
       [f files
        ret ()
@@ -188,4 +185,120 @@
       (recur (rest f) (concat ret (card-movement (file-to-map (str (.getPath (first f)))))))
       )
     )
+  )
+
+(defn get-all-cards [files]
+  (loop
+      [f files
+       ret ()
+       ]
+    (if (empty? f)
+      ret
+      (recur (rest f) (concat ret (:cards (file-to-map (str (.getPath (first f)))))))
+      )
+    )
+  )
+
+(defn actions-to-by-week-frequency [actions]
+  "comvert a collection of actions to frequency by week"
+  (frequencies (map week-of-year-from-trello actions))
+  )
+
+
+
+; print out the edges of the transition graph
+(defn print-movement-stats [movements]
+  (do
+    (println "movements:" (count movements))
+
+    (println "next -> in progress:" (count (filter (fn [a] (move-from-to a next-column-id in-progress-column-id)) movements)))
+    (println "in progress -> next:" (count (filter (fn [a] (move-from-to a in-progress-column-id next-column-id)) movements)))
+    (println "next -> checked in" (count (filter (fn [a] (move-from-to-multiple a next-column-id all-checked-in)) movements)))
+    (println "checked in -> next:" (count (filter (fn [a] (move-from-to-multiple a all-checked-in next-column-id)) movements)))
+
+    (println "in progress -> checked in :" (count (filter (fn [a] (move-from-to-multiple a in-progress-column-id all-checked-in)) movements)))
+    (println "checked in -> in progress:" (count (filter (fn [a] (move-from-to-multiple a all-checked-in in-progress-column-id)) movements)))
+
+    )
+  )
+
+
+(defn print-csv [start stop col1 col2 col3 col4]
+  (loop
+      [idx start]
+    (if (<= idx stop)
+      (do
+        (println idx "," (col1 idx 0) "," (col2 idx 0) "," (col3 idx 0) "," (col4 idx 0))
+        (recur (inc idx))
+        )
+      )
+    )
+  )
+
+(defn get-distinct-cards [all]
+  (loop
+      [ms all
+       cards #{}]
+    (if (empty? ms)
+      cards
+      (recur (rest ms) (conj cards (card-id-of-action (first ms))))
+      )
+
+    )
+  )
+
+(defn get-movements-for-card [card-id movements]
+  (loop
+      [ms movements
+       ret ()]
+    (if (empty? ms)
+      (reverse ret)
+      (recur (rest ms)
+             (if (= (card-id-of-action (first ms)) card-id) (cons (first ms) ret) ret)
+             )
+
+      )
+    )
+  )
+
+(defn print-movements [movements]
+  (loop
+      [ms movements]
+    (if (empty? ms) nil
+                    (do
+                      (println (list-before-id (first ms)) (list-after-id (first ms)))
+                      (recur (rest ms)))
+
+                    )
+    )
+  )
+
+(defn get-column-times [movements-of-card]
+  (loop
+      [ms movements-of-card
+       hm {}]
+
+    (if (<= (count ms) 1)
+      hm
+
+      (let [col-id (list-after-id (first ms))
+            start-time (milli-time (first ms))
+            end-time (milli-time (first (rest ms)))
+            old-sum (hm col-id 0)]
+
+
+        (recur
+          (rest ms)
+          (assoc hm col-id (+ old-sum (- end-time start-time)))
+
+          )
+        )
+
+      )
+    )
+  )
+
+
+(defn get-card-name [card-id cards]
+  (:name (first (filter (fn [c] (= card-id (:id c))) cards)))
   )

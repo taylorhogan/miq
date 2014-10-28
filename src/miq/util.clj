@@ -16,10 +16,19 @@
 (defn today []
   (.format (java.text.SimpleDateFormat. "MM/dd/yyyy") (java.util.Date.))
   )
-(defn remove-from-end [s end]
-  (if (.endsWith s end)
-    (.substring s 0 (- (count s)
-                       (count end)))
-    s))
 
+; Remove suffix from string
+(defn remove-from-end [string suffix]
+  (if (.endsWith string suffix)
+    (.substring string 0 (- (count string)
+                       (count suffix)))
+    string))
 
+; convert milliseconds to days
+(defn from-milli-to-days [milli]
+  (/ (double milli) (* 1000.0 60.0 60.0 24.0)))
+
+; given a hashmap and a collection of keys return the associated collection of values
+(defn get-vals [amap keys]
+  (map (fn [k] (amap k)) keys)
+  )
