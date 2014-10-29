@@ -23,9 +23,9 @@
 
 ; Make the main db, just a hierarchical hash map. The main db contains a collection
 ; of sorted distinct card movements, and a list of cards referenced by those movements
-(defn make-db []
+(defn make-db [filter-function]
   (let [files (get-json-files)
-        movements (sort-by milli-time (distinct (all-card-movements files)))
+        movements (sort-by milli-time (distinct (all-card-movements files filter-function)))
         cards (distinct (get-all-cards files))
         ]
     {:movements movements,
@@ -88,19 +88,25 @@
     (if (empty? cards)
       nil
       (do
-        (println (get-card-name (first cards) (:cards db)))
+        (println (trello-date (first cards)) (apply str (take 16 (get-card-name (first cards) (:cards db)))))
         (recur (rest cards)))
       )
     )
   )
 
+
+(defn any-card [c]
+  (if (empty? c)
+    false
+  (older-than? c "2014" "10" "01")
+ ; true
+  ))
 ; main entry point
 (defn main []
-  (let [db (inject-special-movements (make-db))]
+  (let [db (inject-special-movements (make-db any-card))]
     (do
       (print-db db)
-      (view (plot-movement-frequencies db))
-      (def cards-that-moved (get-distinct-cards (:movements db)))
+      ;(view (plot-movement-frequencies db))
       (print-all-card-movements db)
       )
     )
@@ -108,7 +114,7 @@
 
 
 ; go (for debugging now)
-(main)
+(time (main))
 
 ; TODO in progress
 (comment

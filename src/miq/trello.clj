@@ -6,6 +6,7 @@
 
   )
 
+;TODO Define this and other rules in an file parsed at run time
 ; define some constants for column ids
 (def in-progress-column-id "53067ded5264b32b0bf1dbfa")
 (def next-column-id "53067ded5264b32b0bf1dbf9")
@@ -174,14 +175,20 @@
   (to-millis (trello-date card))
   )
 
+(defn older-than? [card y m d]
+  (let [card-date (milli-time card)
+        proposal (to-millis-from-human y m d)]
+    (>  card-date proposal)
+    )
+  )
 
-(defn all-card-movements [files]
+(defn all-card-movements [files filter-function]
   (loop
       [f files
        ret ()
        ]
     (if (empty? f)
-      ret
+      (filter filter-function ret)
       (recur (rest f) (concat ret (card-movement (file-to-map (str (.getPath (first f)))))))
       )
     )
@@ -272,6 +279,7 @@
                     )
     )
   )
+
 ; given a collection of movements on a given card, return a collection of times in each column
 (defn get-column-times [movements-of-card]
   (loop
@@ -285,8 +293,6 @@
             start-time (milli-time (first ms))
             end-time (milli-time (first (rest ms)))
             old-sum (hm col-id 0)]
-
-
         (recur
           (rest ms)
           (assoc hm col-id (+ old-sum (- end-time start-time)))
