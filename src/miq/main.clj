@@ -19,7 +19,7 @@
   )
 
 (use '(incanter core charts stats))
-
+3
 
 ; Make the main db, just a hierarchical hash map. The main db contains a collection
 ; of sorted distinct card movements, and a list of cards referenced by those movements
@@ -27,9 +27,12 @@
   (let [files (get-json-files)
         movements (sort-by milli-time (distinct (all-card-movements files filter-function)))
         cards (distinct (get-all-cards files))
+        card-map (build-id-to-card-map cards)
         ]
     {:movements movements,
-     :cards     cards}
+     :cards     cards
+     :card-map  card-map
+     :files     files}
     )
   )
 
@@ -88,26 +91,45 @@
     (if (empty? cards)
       nil
       (do
-        (println (trello-date (first cards)) (apply str (take 16 (get-card-name (first cards) (:cards db)))))
+        (println (apply str (take 16 (get-card-name (first cards) (:cards db)))))
         (recur (rest cards)))
       )
     )
   )
 
+; go through all cards that moved and just print out the name
+(defn print-due-dates [db]
+  (let
+      [cards (:cards db)
+       has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
+       ]
+    (doseq [c has-due-date]
 
-(defn any-card [c]
+      (spit "due.txt" (str (get-due-date c) " " (get-card-name c) "\n") :append true)
+      )
+    )
+  )
+
+(defn print-date-stats [db]
+  )
+
+(defn date-filter [c]
   (if (empty? c)
     false
-  (older-than? c "2014" "10" "01")
- ; true
-  ))
+    (older-than? c "2014" "10" "01")
+    )
+  )
+
+
 ; main entry point
 (defn main []
-  (let [db (inject-special-movements (make-db any-card))]
+  (let [db (inject-special-movements (make-db date-filter))]
     (do
       (print-db db)
-      ;(view (plot-movement-frequencies db))
-      (print-all-card-movements db)
+      ; (view (plot-movement-frequencies db))
+      ;(print-date-stats db)
+      (print-due-dates db)
+      ; (print-all-card-movements db)
       )
     )
   )
@@ -115,6 +137,7 @@
 
 ; go (for debugging now)
 (time (main))
+
 
 ; TODO in progress
 (comment

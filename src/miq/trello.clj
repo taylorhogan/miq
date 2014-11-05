@@ -8,14 +8,14 @@
 
 ;TODO Define this and other rules in an file parsed at run time
 ; define some constants for column ids
-(def in-progress-column-id "53067ded5264b32b0bf1dbfa")
-(def next-column-id "53067ded5264b32b0bf1dbf9")
-(def checked-into-dev "53c7c8c718cd4d9bae3b7c91")
-(def checked-into-stable "53067ded5264b32b0bf1dbfb")
+(def ^:const in-progress-column-id "53067ded5264b32b0bf1dbfa")
+(def ^:const next-column-id "53067ded5264b32b0bf1dbf9")
+(def ^:const checked-into-dev "53c7c8c718cd4d9bae3b7c91")
+(def ^:const checked-into-stable "53067ded5264b32b0bf1dbfb")
 
 ; some special virtual columns rules
-(def all-checked-in "all")
-(def not-any-checked-in "none")
+(def ^:const all-checked-in "all")
+(def ^:const not-any-checked-in "none")
 
 
 
@@ -178,7 +178,7 @@
 (defn older-than? [card y m d]
   (let [card-date (milli-time card)
         proposal (to-millis-from-human y m d)]
-    (>  card-date proposal)
+    (> card-date proposal)
     )
   )
 
@@ -193,6 +193,15 @@
       )
     )
   )
+
+(defn build-id-to-card-map [cards]
+  (loop [cds cards
+         result {}]
+    (if (empty? cds)
+      result
+      (recur (rest cds) (assoc result (:id (first cds)) (first cds))))))
+
+
 
 (defn get-all-cards [files]
   (loop
@@ -303,8 +312,16 @@
       )
     )
   )
-
-; Given a card-id and a list of cards, get the name, ugh
-(defn get-card-name [card-id cards]
-  (:name (first (filter (fn [c] (= card-id (:id c))) cards)))
+(defn card-from-id [card-id db]
+  (get (:card-map db) card-id)
   )
+
+; Given a card-id and a db
+(defn get-card-name [card]
+  (:name card)
+  )
+
+(defn get-due-date [card]
+  (:due card)
+  )
+
