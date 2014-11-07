@@ -3,10 +3,12 @@
 ; Extract and report various interesting statistics from Trello card movements
 ;
 
-
 ; a helpful website to see json http://www.jsoneditoronline.org
 ; a helpful plotting page http://data-sorcery.org/category/plotting/
-; Look mom, no locals or statics..
+;
+; A json file is converted into a hierarchical hash map (db)
+; special maps are injected to this db
+; movements
 
 ; TODO Need to generalize the idea of "interesting" transitions, for plotting, printing...
 (ns miq.main
@@ -19,7 +21,7 @@
   )
 
 (use '(incanter core charts stats))
-3
+
 
 ; Make the main db, just a hierarchical hash map. The main db contains a collection
 ; of sorted distinct card movements, and a list of cards referenced by those movements
@@ -46,7 +48,7 @@
   (assoc db :reworks (filter is-rework? (:movements db))
             :interruptions (filter is-interruption? (:movements db))
             :checked-in (filter is-checked-in? (:movements db))
-            :cards-that-moved (get-distinct-cards (:movements db))
+            :card-idxs-that-moved (card-actions-id-to-card-id (:movements db))
 
             )
   )
@@ -72,7 +74,7 @@
         first-week (week-of-year-from-trello (first (:movements db)))
         last-week (week-of-year-from-trello (last (:movements db)))
         date-range (vec (range first-week last-week))
-        plot1 (line-chart date-range (get-vals movement-week-map date-range 0) :y-label "Count" :x-label "Weeks" :legend true :series-label "movements")]
+          plot1 (line-chart date-range (get-vals movement-week-map date-range 0) :y-label "Count" :x-label "Weeks" :legend true :series-label "movements")]
     (do
       (add-categories plot1 date-range (get-vals interuption-week-map date-range 0) :legend true :series-label "interruptions")
       (add-categories plot1 date-range (get-vals rework-week-map date-range 0) :legend true :series-label "rework")
@@ -86,7 +88,7 @@
 ; go through all cards that moved and just print out the name
 (defn print-all-card-movements [db]
   (loop
-      [cards (:cards-that-moved db)]
+      [cards (:card-idxs-that-moved db)]
 
     (if (empty? cards)
       nil
@@ -100,13 +102,43 @@
 ; go through all cards that moved and just print out the name
 (defn print-due-dates [db]
   (let
-      [cards (:cards db)
+      [card-idxs (:card-idxs-that-moved db)
+       cards (map (fn [c] (card-from-id c db)) card-idxs)
        has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
        ]
     (doseq [c has-due-date]
-
-      (spit "due.txt" (str (get-due-date c) " " (get-card-name c) "\n") :append true)
+      (spit "due.txt" (str (:id c) " " (days-late c db) " " (get-card-name c) "\n") :append true)
       )
+    )
+  )
+
+
+; go through all cards that moved and just print out the name
+(defn get-lateness [db]
+  (let
+      [card-idxs (:card-idxs-that-moved db)
+       cards (map (fn [c] (card-from-id c db)) card-idxs)
+       has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
+       ]
+    (loop
+        [xs has-due-date
+         result ()]
+      (if (empty? xs)
+        result
+        (recur (rest xs) (conj result (days-late (first xs) db)))
+        )
+      )
+
+    )
+  )
+(defn print-cards-that-moved [db]
+  (let
+      [cards (:card-idxs-that-moved db)
+       ]
+    (doseq [c cards]
+      (let [card (card-from-id c db)]
+        (spit "moved.txt" (str c " " (:due card) " " (:name card) "\n") :append true)
+        ))
     )
   )
 
@@ -116,7 +148,7 @@
 (defn date-filter [c]
   (if (empty? c)
     false
-    (older-than? c "2014" "10" "01")
+    (older-than? c "2014" "10" "20")
     )
   )
 
@@ -129,7 +161,9 @@
       ; (view (plot-movement-frequencies db))
       ;(print-date-stats db)
       (print-due-dates db)
+      (print-cards-that-moved db)
       ; (print-all-card-movements db)
+      (view (histogram (get-lateness db) :nbins 12 :x-label "days late" :title "Lateness"))
       )
     )
   )

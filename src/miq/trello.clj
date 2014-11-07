@@ -84,7 +84,10 @@
   )
 
 (defn is-checked-in? [movement-c]
-  (= (list-after-id movement-c) checked-into-dev)
+  (or
+    (= (list-after-id movement-c) checked-into-dev)
+    (= (list-after-id movement-c) checked-into-stable)
+    )
   )
 
 
@@ -251,7 +254,7 @@
     )
   )
 
-(defn get-distinct-cards [all]
+(defn card-actions-id-to-card-id [all]
   (loop
       [ms all
        cards #{}]
@@ -312,6 +315,14 @@
       )
     )
   )
+
+
+
+
+
+
+
+
 (defn card-from-id [card-id db]
   (get (:card-map db) card-id)
   )
@@ -325,3 +336,43 @@
   (:due card)
   )
 
+
+
+; Derive the checked in date, or today if not checked in
+(defn get-checked-in-date [card db]
+  (loop
+      [ms (reverse (:movements db))
+       date (today)]
+    (if (empty? ms)
+      date
+      (recur (rest ms)
+             (if
+                 (and
+                   (= (:id card) (card-id-of-action (first ms)))
+                   (is-checked-in? (first ms))
+                   )
+               (:date (first ms))
+               date
+               )
+             )
+
+      )
+    )
+
+  )
+
+
+
+
+
+
+
+(defn days-late [c db]
+  (let [due-date (to-millis (get-due-date c))
+        checked-in (to-millis (get-checked-in-date c db))
+        late (- checked-in due-date)
+        ]
+    (from-milli-to-days late)
+
+    )
+  )

@@ -6,6 +6,12 @@
 
 (import '(java.util Calendar))
 
+
+(defn in?
+  "true if seq contains elm"
+  [seq elm]
+  (some #(= elm %) seq))
+
 ; Given a map containing a key :xs and whose value is xs, return a map describing some basic stats
 ; borrowed from Prismatic/plumbing
 (defn stats
@@ -30,7 +36,7 @@
 
 ; some date stuff
 (defn today []
-  (.format (java.text.SimpleDateFormat. "MM/dd/yyyy") (java.util.Date.))
+  (.format (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (java.util.Date.))
   )
 
 ; Remove suffix from string
