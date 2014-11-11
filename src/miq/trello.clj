@@ -12,6 +12,10 @@
 (def ^:const next-column-id "53067ded5264b32b0bf1dbf9")
 (def ^:const checked-into-dev "53c7c8c718cd4d9bae3b7c91")
 (def ^:const checked-into-stable "53067ded5264b32b0bf1dbfb")
+(def ^:const ENHANCEMENT "545e7fab74d650d567cda37f")
+(def ^:const BUG "545e7fab74d650d567cda37e")
+
+
 
 ; some special virtual columns rules
 (def ^:const all-checked-in "all")
@@ -142,6 +146,7 @@
     )
   )
 
+
 (defn is-interruption? [movement-c]
   (and
     (= (list-after-id movement-c) next-column-id)
@@ -149,6 +154,13 @@
     )
   )
 
+(defn is-enhancement? [card]
+  (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels card))
+  )
+
+(defn is-bug? [card]
+  (some (fn [l] (= (:id l) BUG)) (:labels card))
+  )
 
 (defn to-date [trello-date]
   (.parse (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (remove-from-end trello-date "Z"))
@@ -224,35 +236,6 @@
   )
 
 
-
-; print out the edges of the transition graph
-(defn print-movement-stats [movements]
-  (do
-    (println "movements:" (count movements))
-
-    (println "next -> in progress:" (count (filter (fn [a] (move-from-to a next-column-id in-progress-column-id)) movements)))
-    (println "in progress -> next:" (count (filter (fn [a] (move-from-to a in-progress-column-id next-column-id)) movements)))
-    (println "next -> checked in" (count (filter (fn [a] (move-from-to-multiple a next-column-id all-checked-in)) movements)))
-    (println "checked in -> next:" (count (filter (fn [a] (move-from-to-multiple a all-checked-in next-column-id)) movements)))
-
-    (println "in progress -> checked in :" (count (filter (fn [a] (move-from-to-multiple a in-progress-column-id all-checked-in)) movements)))
-    (println "checked in -> in progress:" (count (filter (fn [a] (move-from-to-multiple a all-checked-in in-progress-column-id)) movements)))
-
-    )
-  )
-
-
-(defn print-csv [start stop col1 col2 col3 col4]
-  (loop
-      [idx start]
-    (if (<= idx stop)
-      (do
-        (println idx "," (col1 idx 0) "," (col2 idx 0) "," (col3 idx 0) "," (col4 idx 0))
-        (recur (inc idx))
-        )
-      )
-    )
-  )
 
 (defn card-actions-id-to-card-id [all]
   (loop
@@ -360,11 +343,6 @@
     )
 
   )
-
-
-
-
-
 
 
 (defn days-late [c db]
