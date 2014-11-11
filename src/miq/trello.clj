@@ -22,7 +22,9 @@
 (def ^:const not-any-checked-in "none")
 
 
-
+;
+; define methods to go from a set of .json files to one db
+;
 (defn get-json-files []
   "return all .json files in a directory"
   (let
@@ -32,13 +34,38 @@
     )
   )
 
-
-
 (defn file-to-map [file-path]
   "Return a map of the json data from the file path"
   (json/read-str (slurp file-path) :key-fn keyword)
   )
 
+;
+; define methods to go between basic data types
+;
+(defn card-id-of-action [action]
+  (:id (:card (:data action)))
+  )
+
+(defn movements-to-card-id [all]
+  (loop
+      [ms all
+       cards #{}]
+    (if (empty? ms)
+      cards
+      (recur (rest ms) (conj cards (card-id-of-action (first ms))))
+      )
+
+    )
+  )
+
+(defn card-from-id [card-id db]
+  (get (:card-map db) card-id)
+  )
+
+
+(defn movement-to-card [movement db]
+  (card-from-id (card-id-of-action movement) db)
+  )
 
 ; bunch of filters to find appropriate cards
 (defn is-update-card? [c]
@@ -70,9 +97,6 @@
   (if (or (nil? (list-after c)) (nil? (list-before c))) false true)
   )
 
-(defn card-id-of-action [action]
-  (:id (:card (:data action)))
-  )
 
 (defn is-card-movement? [c]
   (and (is-update-card? c) (has-data-5? c) (has-list-before-after c) (not= (list-before-id c) (list-after-id c)))
@@ -147,6 +171,7 @@
   )
 
 
+
 (defn is-interruption? [movement-c]
   (and
     (= (list-after-id movement-c) next-column-id)
@@ -154,12 +179,20 @@
     )
   )
 
-(defn is-enhancement? [card]
+(defn is-card-enhancement? [card]
   (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels card))
   )
 
-(defn is-bug? [card]
+(defn is-card-bug? [card]
   (some (fn [l] (= (:id l) BUG)) (:labels card))
+  )
+
+(defn is-movement-enhancement? [movement db]
+  (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels (movement-to-card movement db)))
+  )
+
+(defn is-movement-bug? [movement db]
+  (some (fn [l] (= (:id l) BUG)) (:labels (movement-to-card movement db)))
   )
 
 (defn to-date [trello-date]
@@ -231,23 +264,13 @@
   )
 
 (defn actions-to-by-week-frequency [actions]
-  "comvert a collection of actions to frequency by week"
+  "convert a collection of actions to frequency by week"
   (frequencies (map week-of-year-from-trello actions))
   )
 
 
 
-(defn card-actions-id-to-card-id [all]
-  (loop
-      [ms all
-       cards #{}]
-    (if (empty? ms)
-      cards
-      (recur (rest ms) (conj cards (card-id-of-action (first ms))))
-      )
 
-    )
-  )
 
 (defn get-movements-for-card [card-id movements]
   (loop
@@ -263,17 +286,7 @@
     )
   )
 
-(defn print-movements [movements]
-  (loop
-      [ms movements]
-    (if (empty? ms) nil
-                    (do
-                      (println (list-before-id (first ms)) (list-after-id (first ms)))
-                      (recur (rest ms)))
 
-                    )
-    )
-  )
 
 ; given a collection of movements on a given card, return a collection of times in each column
 (defn get-column-times [movements-of-card]
@@ -305,10 +318,6 @@
 
 
 
-
-(defn card-from-id [card-id db]
-  (get (:card-map db) card-id)
-  )
 
 ; Given a card-id and a db
 (defn get-card-name [card]
@@ -353,4 +362,10 @@
     (from-milli-to-days late)
 
     )
+  )
+
+(defn unique-cards-from-movements [movements]
+  "given a collection of movements, derive the unique set of cards that are involved in those movements"
+  ;partition the collectoin by card id and then take the first item from each partition.
+  (map (fn[c] (first c)) (partition-by (fn [m] (:id (:card (:data m)))) movements))
   )

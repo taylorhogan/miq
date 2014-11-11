@@ -34,6 +34,7 @@
     (println "check-in" (count (:checked-in db)))
     (print-movement-stats (:movements db))
     ))
+
 ; go through all cards that moved and just print out the name
 (defn print-all-card-movements [db]
   (loop
@@ -76,14 +77,36 @@
   (let
       [card-idxs (:card-idxs-that-moved db)
        cards (map (fn [c] (card-from-id c db)) card-idxs)
-       enhancements (filter is-enhancement? cards)
+       enhancements (filter is-card-enhancement? cards)
        ]
     (doseq [c enhancements]
       (spit "enhancements.txt" (str (:id c) (get-card-name c) "\n") :append true)
       )
     )
   )
+(defn print-checked-in-enhancement [db]
+  (let
+      [checked-in (:checked-in db)
+       unique-cards (unique-cards-from-movements checked-in)
+       filtered (filter (fn[m] (is-movement-enhancement? m db)) unique-cards)
+       ]
+    (doseq [c filtered]
+      (spit "enhancements.txt" (str  (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
+      )
+    )
+  )
 
+(defn print-checked-in-bug [db]
+  (let
+      [checked-in (:checked-in db)
+       unique-cards (unique-cards-from-movements checked-in)
+       filtered (filter (fn[m] (is-movement-bug? m db)) unique-cards)
+       ]
+    (doseq [c filtered]
+      (spit "bugs.txt" (str  (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
+      )
+    )
+  )
 (defn print-cards-that-moved [db]
   (let
       [cards (:card-idxs-that-moved db)
@@ -94,8 +117,17 @@
         ))
     )
   )
+(defn print-movements [movements]
+  (loop
+      [ms movements]
+    (if (empty? ms) nil
+                    (do
+                      (println (list-before-id (first ms)) (list-after-id (first ms)))
+                      (recur (rest ms)))
 
-
+                    )
+    )
+  )
 
 
 (defn print-csv [start stop col1 col2 col3 col4]
@@ -109,3 +141,6 @@
       )
     )
   )
+
+
+

@@ -48,7 +48,7 @@
   (assoc db :reworks (filter is-rework? (:movements db))
             :interruptions (filter is-interruption? (:movements db))
             :checked-in (filter is-checked-in? (:movements db))
-            :card-idxs-that-moved (card-actions-id-to-card-id (:movements db))
+            :card-idxs-that-moved (movements-to-card-id (:movements db))
 
             )
   )
@@ -92,7 +92,8 @@
       (print-db db)
       ; (view (plot-movement-frequencies db))
       ;(print-date-stats db)
-      (print-enhancements db)
+      (print-checked-in-enhancement db)
+      (print-checked-in-bug db)
       ;(print-cards-that-moved db)
       ; (print-all-card-movements db)
       ;(view (histogram (get-lateness db) :nbins 12 :x-label "days late" :title "Lateness"))
@@ -103,6 +104,7 @@
 
 ; go (for debugging now)
 (time (main))
+(def db (inject-special-movements (make-db date-filter)))
 
 
 ; TODO in progress
