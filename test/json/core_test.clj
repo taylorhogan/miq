@@ -1,6 +1,6 @@
 (ns json.core-test
   (:require [clojure.test :refer :all]
-            [miq.main  :refer :all]))
+            [miq.core  :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."

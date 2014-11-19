@@ -11,7 +11,7 @@
 ; movements
 
 ; TODO Need to generalize the idea of "interesting" transitions, for plotting, printing...
-(ns miq.main
+(ns miq.core
   (:require [clojure.data.json :as json]
             [miq.util :refer :all]
             [miq.trello :refer :all]
@@ -21,7 +21,7 @@
             (:gen-class))
 
   )
-
+(use '(incanter core charts stats))
 
 ; Make the main db, just a hierarchical hash map. The main db contains a collection
 ; of sorted distinct card movements, and a list of cards referenced by those movements
@@ -46,11 +46,11 @@
 (defn inject-special-movements [db]
 
   (assoc db :reworks (filter is-rework? (:movements db))
-            :interruptions (filter is-interruption? (:movements db))
-            :checked-in (filter is-checked-in? (:movements db))
-            :card-idxs-that-moved (movements-to-card-id (:movements db))
+         :interruptions (filter is-interruption? (:movements db))
+         :checked-in (unique-cards-from-movements (filter is-checked-in? (:movements db)))
+         :card-idxs-that-moved (movements-to-card-id (:movements db))
 
-            )
+         )
   )
 
 
@@ -60,13 +60,13 @@
 ; go through all cards that moved and just print out the name
 (defn get-lateness [db]
   (let
-      [card-idxs (:card-idxs-that-moved db)
-       cards (map (fn [c] (card-from-id c db)) card-idxs)
-       has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
-       ]
+    [card-idxs (:card-idxs-that-moved db)
+     cards (map (fn [c] (card-from-id c db)) card-idxs)
+     has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
+     ]
     (loop
-        [xs has-due-date
-         result ()]
+      [xs has-due-date
+       result ()]
       (if (empty? xs)
         result
         (recur (rest xs) (conj result (days-late (first xs) db)))
@@ -80,39 +80,30 @@
 (defn date-filter [c]
   (if (empty? c)
     false
-    (older-than? c "2014" "1" "20")
+    (older-than? c "2014" "10" "20")
     )
   )
 
 
 ; main entry point
-(defn main []
+(defn -main [& args]
   (let [db (inject-special-movements (make-db date-filter))]
     (do
       (print-db db)
-      ; (view (plot-movement-frequencies db))
+      (view (plot-movement-frequencies db))
       ;(print-date-stats db)
       (print-checked-in-enhancement db)
-      (print-checked-in-bug db)
+      (print-checked-in db)
       ;(print-cards-that-moved db)
       ; (print-all-card-movements db)
-      ;(view (histogram (get-lateness db) :nbins 12 :x-label "days late" :title "Lateness"))
+      (view (histogram (get-lateness db) :nbins 12 :x-label "days late" :title "Lateness"))
+      (view (plot-checked-in db))
+      (def a (get-column-stats (:movements db)))
       )
     )
   )
 
-
 ; go (for debugging now)
-(time (main))
+(time (-main))
 (def db (inject-special-movements (make-db date-filter)))
 
-
-; TODO in progress
-(comment
-
-  (println (from-milli-to-days ((get-column-times m) in-progress-column-id 0)))
-  (println (from-milli-to-days ((get-column-times m) next-column-id 0)))
-
-
-  ;(def has-schedule (filter (fn [c] (not-empty (:due c))) (:cards json-map)))
-  )

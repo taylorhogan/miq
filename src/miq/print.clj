@@ -3,7 +3,7 @@
             [miq.util :refer :all]
             [miq.trello :refer :all]
             [clojure.set :as set]
-           )
+            )
 
   )
 
@@ -38,7 +38,7 @@
 ; go through all cards that moved and just print out the name
 (defn print-all-card-movements [db]
   (loop
-      [cards (:card-idxs-that-moved db)]
+    [cards (:card-idxs-that-moved db)]
 
     (if (empty? cards)
       nil
@@ -52,10 +52,10 @@
 ; go through all cards that moved and just print out the name
 (defn print-due-dates [db]
   (let
-      [card-idxs (:card-idxs-that-moved db)
-       cards (map (fn [c] (card-from-id c db)) card-idxs)
-       has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
-       ]
+    [card-idxs (:card-idxs-that-moved db)
+     cards (map (fn [c] (card-from-id c db)) card-idxs)
+     has-due-date (filter (fn [c] (if (nil? (get-due-date c)) false true)) cards)
+     ]
     (doseq [c has-due-date]
       (spit "due.txt" (str (:id c) "label:" (:label c) " " (days-late c db) " " (get-card-name c) "\n") :append true)
       )
@@ -64,53 +64,55 @@
 
 (defn print-labels [db]
   (let
-      [card-idxs (:card-idxs-that-moved db)
-       cards (map (fn [c] (card-from-id c db)) card-idxs)
-       ]
+    [card-idxs (:card-idxs-that-moved db)
+     cards (map (fn [c] (card-from-id c db)) card-idxs)
+     ]
     (doseq [c cards]
-      (spit "label.txt" (str "label: " (:name (first (:labels c))) " name:"  (get-card-name c) "\n") :append true)
+      (spit "label.txt" (str "label: " (:name (first (:labels c))) " name:" (get-card-name c) "\n") :append true)
       )
     )
   )
 
-(defn print-enhancements[db]
-  (let
-      [card-idxs (:card-idxs-that-moved db)
-       cards (map (fn [c] (card-from-id c db)) card-idxs)
-       enhancements (filter is-card-enhancement? cards)
-       ]
-    (doseq [c enhancements]
-      (spit "enhancements.txt" (str (:id c) (get-card-name c) "\n") :append true)
-      )
-    )
-  )
+
 (defn print-checked-in-enhancement [db]
   (let
-      [checked-in (:checked-in db)
-       unique-cards (unique-cards-from-movements checked-in)
-       filtered (filter (fn[m] (is-movement-enhancement? m db)) unique-cards)
-       ]
+    [checked-in (:checked-in db)
+     unique-cards (unique-cards-from-movements checked-in)
+     filtered (filter (fn [m] (is-movement-enhancement? m db)) unique-cards)
+     ]
     (doseq [c filtered]
-      (spit "enhancements.txt" (str  (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
+      (spit "enhancements.txt" (str (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
       )
     )
   )
 
 (defn print-checked-in-bug [db]
   (let
-      [checked-in (:checked-in db)
-       unique-cards (unique-cards-from-movements checked-in)
-       filtered (filter (fn[m] (is-movement-bug? m db)) unique-cards)
-       ]
+    [checked-in (:checked-in db)
+     unique-cards (unique-cards-from-movements checked-in)
+     filtered (filter (fn [m] (is-movement-bug? m db)) unique-cards)
+     ]
     (doseq [c filtered]
-      (spit "bugs.txt" (str  (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
+      (spit "bugs.txt" (str (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
       )
     )
   )
+(defn print-checked-in [db]
+  (let
+    [checked-in (:checked-in db)
+     unique-cards (unique-cards-from-movements checked-in)
+
+     ]
+    (doseq [c unique-cards]
+      (spit "checkin.txt" (str "week: " (week-of-year-from-trello c) " " (get-card-name (card-from-id (card-id-of-action c) db)) "\n") :append true)
+      )
+    )
+  )
+
 (defn print-cards-that-moved [db]
   (let
-      [cards (:card-idxs-that-moved db)
-       ]
+    [cards (:card-idxs-that-moved db)
+     ]
     (doseq [c cards]
       (let [card (card-from-id c db)]
         (spit "moved.txt" (str c " " (:due card) " " (:name card) "\n") :append true)
@@ -119,7 +121,7 @@
   )
 (defn print-movements [movements]
   (loop
-      [ms movements]
+    [ms movements]
     (if (empty? ms) nil
                     (do
                       (println (list-before-id (first ms)) (list-after-id (first ms)))
@@ -132,7 +134,7 @@
 
 (defn print-csv [start stop col1 col2 col3 col4]
   (loop
-      [idx start]
+    [idx start]
     (if (<= idx stop)
       (do
         (println idx "," (col1 idx 0) "," (col2 idx 0) "," (col3 idx 0) "," (col4 idx 0))
@@ -142,5 +144,24 @@
     )
   )
 
+(defn count-movements [from to all]
+  (count (filter (fn [a] (move-from-to a from to)) all))
+  )
+(defn create-movement-matrix [db movements]
 
+  )
+
+(defn print-movement-matrix [db]
+  (let [v [next-column-id creating-test-case in-progress-column-id checked-into-dev checked-into-stable checked-into-sip]
+        w ["request" "test case" "working" "dev" "stable" "sip"]
+        s (count v)
+       ]
+
+
+    (doseq [m (for [x (range s) y (range s) :when (not (= x y))] [ x y])]
+           (println (w (m 0)) "->" (w (m 1))
+           (count-movements (v (m 0)) (v (m 1)) (:movements db))))
+    )
+
+  )
 

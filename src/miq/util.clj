@@ -13,18 +13,22 @@
   (some #(= elm %) seq))
 
 ; Given a map containing a key :xs and whose value is xs, return a map describing some basic stats
-; borrowed from Prismatic/plumbing
-(defn stats
-  [{:keys [xs] :as m}]
-  (assert (contains? m :xs))
-  (let [n (count xs)
-        m (/ (reduce + xs) n)
+; borrowed from Prismatic/plumbing, then modidied
+(defn stats [xs]
+  (let [s (reduce + xs)
+        n (count xs)
+        m (/ s n)
         m2 (/ (reduce + (map (fn [x] (* x x)) xs)) n)
-        v (- m2 (* m m))]
-    {:n  n                                                  ; count
+        v (- m2 (* m m))
+        sorted (sort xs)
+        med (nth sorted (/ n 2))
+         ]
+    {:s s
+     :n  n                                                  ; count
      :m  m                                                  ; mean
      :m2 m2                                                 ; mean square
-     :v  v                                                  ; variance
+     :v  v
+     :med med                                                    ; variance
      }))
 
 ; get resource path, some environments set up the working directory differently

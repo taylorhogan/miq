@@ -6,6 +6,7 @@
             )
 
   )
+
 (use '(incanter core charts stats))
 
 
@@ -29,3 +30,27 @@
     )
   )
 
+(defn plot-checked-in [db]
+  (let
+      [checked-in (:checked-in db)
+       unique-cards (unique-cards-from-movements checked-in)
+       enh (filter (fn [m] (is-movement-enhancement? m db)) unique-cards)
+       bugs (filter (fn [m] (is-movement-bug? m db)) unique-cards)
+       unknown (filter (fn [m] (is-movement-unknown? m db)) unique-cards)
+       enh-week-map (actions-to-by-week-frequency enh)
+       bug-week-map (actions-to-by-week-frequency bugs)
+       unknown-week-map (actions-to-by-week-frequency unknown)
+;       first-week (week-of-year-from-trello (first (:checked-in db)))
+       first-week (dec (week-of-year-from-trello (first enh)))
+       last-week (week-of-year-from-trello (last (:checked-in db)))
+       date-range (vec (range first-week last-week))
+       plot2 (line-chart date-range (get-vals enh-week-map date-range 0) :y-label "Count" :x-label "Weeks" :legend true :series-label "Enhancements")]
+    (do
+      (add-categories plot2 date-range (get-vals bug-week-map date-range 0) :legend true :series-label "Bugs")
+      (add-categories plot2 date-range (get-vals unknown-week-map date-range 0) :legend true :series-label "Unknown")
+
+      )
+
+    plot2
+    )
+  )

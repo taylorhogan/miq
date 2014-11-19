@@ -8,10 +8,15 @@
 
 ;TODO Define this and other rules in an file parsed at run time
 ; define some constants for column ids
+
+(def ^:const next-column-id "5440143608a36550f6441d04")
+(def ^:const creating-test-case "53067ded5264b32b0bf1dbf9")
 (def ^:const in-progress-column-id "53067ded5264b32b0bf1dbfa")
-(def ^:const next-column-id "53067ded5264b32b0bf1dbf9")
+
 (def ^:const checked-into-dev "53c7c8c718cd4d9bae3b7c91")
 (def ^:const checked-into-stable "53067ded5264b32b0bf1dbfb")
+(def ^:const checked-into-sip "542990b2c67f966c319b4f11")
+
 (def ^:const ENHANCEMENT "545e7fab74d650d567cda37f")
 (def ^:const BUG "545e7fab74d650d567cda37e")
 
@@ -114,7 +119,8 @@
 (defn is-checked-in? [movement-c]
   (or
     (= (list-after-id movement-c) checked-into-dev)
-    (= (list-after-id movement-c) checked-into-stable)
+    ;(= (list-after-id movement-c) checked-into-stable)
+    (= (list-after-id movement-c) checked-into-sip)
     )
   )
 
@@ -178,15 +184,15 @@
     (= (list-before-id movement-c) in-progress-column-id)
     )
   )
+(comment
+  (defn is-card-enhancement? [card]
+    (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels card))
+    )
 
-(defn is-card-enhancement? [card]
-  (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels card))
+  (defn is-card-bug? [card]
+    (some (fn [l] (= (:id l) BUG)) (:labels card))
+    )
   )
-
-(defn is-card-bug? [card]
-  (some (fn [l] (= (:id l) BUG)) (:labels card))
-  )
-
 (defn is-movement-enhancement? [movement db]
   (some (fn [l] (= (:id l) ENHANCEMENT)) (:labels (movement-to-card movement db)))
   )
@@ -194,7 +200,16 @@
 (defn is-movement-bug? [movement db]
   (some (fn [l] (= (:id l) BUG)) (:labels (movement-to-card movement db)))
   )
-
+(defn is-movement-unknown? [movement db]
+  (some (fn [l] (not
+                  (or
+                    (= (:id l) BUG)
+                    (= (:id l) ENHANCEMENT)
+                    )
+                  )
+          )
+        (:labels (movement-to-card movement db)))
+  )
 (defn to-date [trello-date]
   (.parse (java.text.SimpleDateFormat. "yyyy-MM-dd'T'HH:mm:ss.SSS") (remove-from-end trello-date "Z"))
   )
@@ -312,7 +327,28 @@
     )
   )
 
+(defn get-column-stats [movements-of-card]
+  (loop
+      [ms movements-of-card
+       hm {}]
+    (if (<= (count ms) 1)
+      hm
+      (let [col-id (list-after-id (first ms))
+            start-time (milli-time (first ms))
+            end-time (milli-time (first (rest ms)))
+            old-list (hm col-id ())
+            new-list (conj old-list (- end-time start-time)) ]
 
+        (recur
+          (rest ms)
+          (assoc hm col-id new-list)
+
+          )
+        )
+
+      )
+    )
+  )
 
 
 
@@ -367,5 +403,5 @@
 (defn unique-cards-from-movements [movements]
   "given a collection of movements, derive the unique set of cards that are involved in those movements"
   ;partition the collectoin by card id and then take the first item from each partition.
-  (map (fn[c] (first c)) (partition-by (fn [m] (:id (:card (:data m)))) movements))
+  (map (fn [c] (first c)) (partition-by (fn [m] (:id (:card (:data m)))) movements))
   )
