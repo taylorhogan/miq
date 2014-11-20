@@ -119,7 +119,6 @@
 (defn is-checked-in? [movement-c]
   (or
     (= (list-after-id movement-c) checked-into-dev)
-    ;(= (list-after-id movement-c) checked-into-stable)
     (= (list-after-id movement-c) checked-into-sip)
     )
   )
@@ -404,4 +403,10 @@
   "given a collection of movements, derive the unique set of cards that are involved in those movements"
   ;partition the collectoin by card id and then take the first item from each partition.
   (map (fn [c] (first c)) (partition-by (fn [m] (:id (:card (:data m)))) movements))
+  )
+
+(use '[clojure.string :only (join split)])
+
+(defn card-title-words [card-id db]
+  (seq (split (:name (card-from-id card-id db)) #"\s+"))
   )

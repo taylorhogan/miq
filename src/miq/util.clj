@@ -68,3 +68,20 @@
 (defn to-millis-from-human [y m d]
   (.getTime (to-date-from-human y m d))
   )
+
+
+(defn most-frequent-n [n items]
+  (->> items
+       frequencies
+       (sort-by val)
+       reverse
+       (take n)
+       (map first)))
+
+(defn frequencies-n [n items]
+  (->> items
+       frequencies
+       (sort-by val)
+       reverse
+       (take n)
+       ))

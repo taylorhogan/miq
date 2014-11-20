@@ -8,7 +8,7 @@
 ;
 ; A json file is converted into a hierarchical hash map (db)
 ; special maps are injected to this db
-; movements
+;
 
 ; TODO Need to generalize the idea of "interesting" transitions, for plotting, printing...
 (ns miq.core
@@ -17,6 +17,7 @@
             [miq.trello :refer :all]
             [miq.print :refer :all]
             [miq.plot :refer :all]
+            [miq.wordcloud :refer :all]
             [clojure.set :as set]
             (:gen-class))
 
@@ -57,7 +58,7 @@
 
 
 
-; go through all cards that moved and just print out the name
+; go through all cards that have a due date and determine when it was checked in and derive lateness
 (defn get-lateness [db]
   (let
     [card-idxs (:card-idxs-that-moved db)
@@ -77,6 +78,7 @@
   )
 
 
+; a high level filter to keep movements by a certain date
 (defn date-filter [c]
   (if (empty? c)
     false
@@ -90,6 +92,7 @@
   (let [db (inject-special-movements (make-db date-filter))]
     (do
       (print-db db)
+      (print-movement-matrix db)
       (view (plot-movement-frequencies db))
       ;(print-date-stats db)
       (print-checked-in-enhancement db)
@@ -98,7 +101,8 @@
       ; (print-all-card-movements db)
       (view (histogram (get-lateness db) :nbins 12 :x-label "days late" :title "Lateness"))
       (view (plot-checked-in db))
-      (def a (get-column-stats (:movements db)))
+      ;(def a (get-column-stats (:movements db)))
+      (view (plot-word-cloud db 100))
       )
     )
   )
@@ -106,4 +110,8 @@
 ; go (for debugging now)
 (time (-main))
 (def db (inject-special-movements (make-db date-filter)))
+
+
+
+
 
